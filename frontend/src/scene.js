@@ -1,20 +1,21 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { DigitalTwinEnvironment } from './environment.js';
 
 export class DigitalTwinScene {
   constructor(containerId) {
     this.container = document.getElementById(containerId);
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x93c5fd); // Vivid realistic sky blue
-    this.scene.fog = new THREE.FogExp2(0x93c5fd, 0.0035); // Atmospheric horizon haze
+    
+    // 1. Smart City Dark Mode & Horizon Fog
+    this.scene.background = new THREE.Color('#0f172a'); // Deep slate dark mode
+    this.scene.fog = new THREE.Fog('#0f172a', 60, 250); // Atmospheric distance fog
     
     // Camera setup
     this.camera = new THREE.PerspectiveCamera(
-      42,
+      45,
       this.container.clientWidth / this.container.clientHeight,
-      0.5,
-      1200
+      0.1,
+      1000
     );
     this.setupCameraView('perspective');
 
@@ -26,25 +27,22 @@ export class DigitalTwinScene {
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.1;
     this.container.appendChild(this.renderer.domElement);
 
     // Controls
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.05;
-    this.controls.maxPolarAngle = Math.PI / 2 - 0.03; // Don't go below ground
-    this.controls.minDistance = 10;
-    this.controls.maxDistance = 500;
+    this.controls.maxPolarAngle = Math.PI / 2 - 0.05; // Don't go below ground
 
-    // Environment
+    // Environment & Base Layers
     this.setupEnvironment();
 
     // Interaction Raycaster
     this.raycaster = new THREE.Raycaster();
     this.mouse = new THREE.Vector2();
 
-    // Ground BEV mesh reference
+    // Ground mesh reference (Overlay BEV texture)
     this.groundMesh = null;
 
     // Resize handler
@@ -52,33 +50,42 @@ export class DigitalTwinScene {
   }
 
   setupEnvironment() {
-    // Ambient / Hemisphere light
-    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x445544, 0.7);
-    hemiLight.position.set(0, 300, 0);
+    // 5. Lighting Adjustments for Dark Mode
+    const hemiLight = new THREE.HemisphereLight('#64748b', '#0f172a', 0.6);
+    hemiLight.position.set(0, 200, 0);
     this.scene.add(hemiLight);
 
-    // Key Directional Sunlight
-    const dirLight = new THREE.DirectionalLight(0xfffaed, 1.6);
-    dirLight.position.set(120, 160, 90);
+    const dirLight = new THREE.DirectionalLight('#ffffff', 1.5);
+    dirLight.position.set(80, 140, 60);
     dirLight.castShadow = true;
-    dirLight.shadow.camera.top = 220;
-    dirLight.shadow.camera.bottom = -220;
-    dirLight.shadow.camera.left = -220;
-    dirLight.shadow.camera.right = 220;
-    dirLight.shadow.camera.near = 1;
-    dirLight.shadow.camera.far = 600;
+    dirLight.shadow.camera.top = 80;
+    dirLight.shadow.camera.bottom = -80;
+    dirLight.shadow.camera.left = -80;
+    dirLight.shadow.camera.right = 80;
+    dirLight.shadow.camera.near = 0.1;
+    dirLight.shadow.camera.far = 400;
     dirLight.shadow.mapSize.width = 4096;
     dirLight.shadow.mapSize.height = 4096;
-    dirLight.shadow.bias = -0.0003;
+    dirLight.shadow.bias = -0.0005;
     this.scene.add(dirLight);
 
-    // Secondary fill light for soft shadows
-    const fillLight = new THREE.DirectionalLight(0x93c5fd, 0.4);
-    fillLight.position.set(-100, 80, -100);
-    this.scene.add(fillLight);
+    // 2. The "Infinite" Asphalt Base Plane (y = 0.0)
+    const baseGeo = new THREE.PlaneGeometry(2000, 2000);
+    const baseMat = new THREE.MeshStandardMaterial({
+      color: '#1a1a1a',
+      roughness: 0.9,
+      metalness: 0.1
+    });
+    const basePlane = new THREE.Mesh(baseGeo, baseMat);
+    basePlane.rotation.x = -Math.PI / 2; // Lie flat on XZ plane
+    basePlane.position.set(0, 0.0, 0);
+    basePlane.receiveShadow = true;
+    this.scene.add(basePlane);
 
-    // Build the complete 3D procedural environment (terrain, roads, signals, houses, trees)
-    this.env = new DigitalTwinEnvironment(this.scene);
+    // 4. Infinite Grid Helper (y = 0.05)
+    const grid = new THREE.GridHelper(2000, 200, '#334155', '#1e293b');
+    grid.position.set(0, 0.05, 0);
+    this.scene.add(grid);
   }
 
   loadEnvironment(meta) {
@@ -97,7 +104,7 @@ export class DigitalTwinScene {
 
     const planeGeo = new THREE.PlaneGeometry(width, height);
     
-    // Load BEV Texture
+    // 3. Intersection Texture Layering (y = 0.1 to prevent Z-fighting)
     const textureLoader = new THREE.TextureLoader();
     let material;
     if (meta.bev_texture) {
@@ -106,19 +113,20 @@ export class DigitalTwinScene {
       
       material = new THREE.MeshStandardMaterial({
         map: bevTexture,
-        roughness: 0.85,
-        metalness: 0.05,
+        roughness: 0.8,
+        metalness: 0.1,
+        transparent: true,
         polygonOffset: true,
         polygonOffsetFactor: -1,
         polygonOffsetUnits: -1
       });
     } else {
-      material = new THREE.MeshStandardMaterial({ color: 0x2b2e33, roughness: 0.85 });
+      material = new THREE.MeshStandardMaterial({ color: '#222222', roughness: 0.8 });
     }
 
     this.groundMesh = new THREE.Mesh(planeGeo, material);
     this.groundMesh.rotation.x = -Math.PI / 2; // Flat on XZ plane
-    this.groundMesh.position.set(centerX, 0.01, centerZ); // Slightly elevated above base asphalt to avoid z-fighting
+    this.groundMesh.position.set(centerX, 0.1, centerZ); // Placed at y = 0.1 above infinite base
     this.groundMesh.receiveShadow = true;
     
     this.scene.add(this.groundMesh);
@@ -127,14 +135,13 @@ export class DigitalTwinScene {
   setupCameraView(viewType, targetPosition = new THREE.Vector3(0, 0, 0)) {
     switch (viewType) {
       case 'perspective':
-        // Natural elevated overview matching intersection angle
-        this.camera.position.set(0, 55, 75);
+        this.camera.position.set(0, 50, 70);
         break;
       case 'topdown':
-        this.camera.position.set(targetPosition.x, 110, targetPosition.z);
+        this.camera.position.set(targetPosition.x, 100, targetPosition.z);
         break;
       case 'driver':
-        this.camera.position.set(targetPosition.x, 3.2, targetPosition.z - 12);
+        this.camera.position.set(targetPosition.x, 3, targetPosition.z - 12);
         break;
     }
     this.camera.lookAt(targetPosition);
