@@ -66,7 +66,8 @@ class App {
     for (const frameStr in this.sceneData.frames) {
       const frameData = this.sceneData.frames[frameStr];
       frameData.forEach(v => {
-        if (Math.abs(v.x) < 20000 && Math.abs(v.z) < 20000) {
+        // Loose raw filter to avoid NaN/Infinity
+        if (Number.isFinite(v.x) && Number.isFinite(v.z)) {
           allX.push(v.x);
           allZ.push(v.z);
         }
@@ -78,30 +79,35 @@ class App {
     allX.sort((a,b) => a-b);
     allZ.sort((a,b) => a-b);
     
-    // Ignore 5% outliers on each end
-    const minX = allX[Math.floor(allX.length * 0.05)];
-    const maxX = allX[Math.floor(allX.length * 0.95)];
-    const minZ = allZ[Math.floor(allZ.length * 0.05)];
-    const maxZ = allZ[Math.floor(allZ.length * 0.95)];
+    // Use IQR (25th to 75th percentile) for robust scale
+    const q1X = allX[Math.floor(allX.length * 0.25)];
+    const q3X = allX[Math.floor(allX.length * 0.75)];
+    const q1Z = allZ[Math.floor(allZ.length * 0.25)];
+    const q3Z = allZ[Math.floor(allZ.length * 0.75)];
 
-    const rangeX = maxX - minX;
-    const rangeZ = maxZ - minZ;
+    const iqrX = q3X - q1X;
+    const iqrZ = q3Z - q1Z;
     
-    // Scale everything into roughly a 160x160 area (-80 to +80)
-    const scale = 160 / Math.max(rangeX, rangeZ, 1);
+    // Scale IQR into roughly 80 units (half the intersection)
+    const scale = 80 / Math.max(iqrX, iqrZ, 1);
     
-    const centerX = (minX + maxX) / 2;
-    const centerZ = (minZ + maxZ) / 2;
+    // Use Median for center
+    const centerX = allX[Math.floor(allX.length * 0.5)];
+    const centerZ = allZ[Math.floor(allZ.length * 0.5)];
 
     for (const frameStr in this.sceneData.frames) {
       const frameData = this.sceneData.frames[frameStr];
       frameData.forEach(v => {
-        v.x = (v.x - centerX) * scale;
+        // Invert X to match video left-to-right alignment
+        v.x = -(v.x - centerX) * scale;
         v.z = (v.z - centerZ) * scale;
         
         // Clamp to avoid vehicles shooting off into infinity during glitches
         v.x = Math.max(-120, Math.min(120, v.x));
         v.z = Math.max(-120, Math.min(120, v.z));
+
+        // Adjust yaw because X was mirrored
+        v.yaw = Math.PI - v.yaw;
       });
     }
   }
