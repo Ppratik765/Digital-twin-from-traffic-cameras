@@ -22,6 +22,9 @@ export class HUD {
     window.addEventListener('resize', this.resizeCanvas.bind(this));
     // Wait for video metadata to have intrinsic dimensions
     this.video.addEventListener('loadedmetadata', this.resizeCanvas.bind(this));
+
+    // Toggle for bounding box overlay visibility
+    this.showBoundingBoxes = false;
   }
 
   resizeCanvas() {
@@ -59,6 +62,8 @@ export class HUD {
     // Clear canvas completely
     this.overlayCtx.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
     
+    // If bounding boxes are disabled, exit early
+    if (!this.showBoundingBoxes) return;
     if (!frameData || !videoWidth || !videoHeight) return;
 
     // We need to scale from intrinsic video dimensions to displayed canvas dimensions
