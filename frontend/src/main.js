@@ -201,7 +201,9 @@ class App {
     this.vehicleManager.updateVehicles(f1Data, f2Data, progress, this.meta);
 
     // Update 2D Overlay (no interpolation, just use floor frame)
-    this.hud.drawOverlay(f1Data, this.meta.resolution[0], this.meta.resolution[1]);
+    const videoWidth = (this.meta && this.meta.resolution && this.meta.resolution[0]) || this.video.videoWidth || 1920;
+    const videoHeight = (this.meta && this.meta.resolution && this.meta.resolution[1]) || this.video.videoHeight || 1080;
+    this.hud.drawOverlay(f1Data, videoWidth, videoHeight);
 
     // Update Stats
     let totalSpeed = 0;
