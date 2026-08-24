@@ -198,7 +198,7 @@ class App {
     const f2Data = this.sceneData.frames[frame2] || [];
 
     // Update 3D Vehicles
-    this.vehicleManager.updateVehicles(f1Data, f2Data, progress);
+    this.vehicleManager.updateVehicles(f1Data, f2Data, progress, this.meta);
 
     // Update 2D Overlay (no interpolation, just use floor frame)
     this.hud.drawOverlay(f1Data, this.meta.resolution[0], this.meta.resolution[1]);

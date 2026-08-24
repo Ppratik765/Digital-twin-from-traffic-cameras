@@ -40,36 +40,41 @@ export class DigitalTwinScene {
     this.raycaster = new THREE.Raycaster();
     this.mouse = new THREE.Vector2();
 
+    // Ground mesh reference
+    this.groundMesh = null;
+
     // Resize handler
     window.addEventListener('resize', this.onWindowResize.bind(this));
   }
 
   setupEnvironment() {
     // Lights
-    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.4);
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.5);
     hemiLight.position.set(0, 200, 0);
     this.scene.add(hemiLight);
 
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
-    dirLight.position.set(100, 150, 50);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.4);
+    dirLight.position.set(80, 120, 60);
     dirLight.castShadow = true;
-    dirLight.shadow.camera.top = 100;
-    dirLight.shadow.camera.bottom = -100;
-    dirLight.shadow.camera.left = -100;
-    dirLight.shadow.camera.right = 100;
+    dirLight.shadow.camera.top = 80;
+    dirLight.shadow.camera.bottom = -80;
+    dirLight.shadow.camera.left = -80;
+    dirLight.shadow.camera.right = 80;
     dirLight.shadow.camera.near = 0.1;
-    dirLight.shadow.camera.far = 500;
+    dirLight.shadow.camera.far = 400;
     dirLight.shadow.mapSize.width = 4096;
     dirLight.shadow.mapSize.height = 4096;
     dirLight.shadow.bias = -0.0005;
     this.scene.add(dirLight);
-
-    // Build the high-fidelity procedural intersection
-    // this.env = new DigitalTwinEnvironment(this.scene); -> Removed in favor of BEV mapping
   }
 
   loadEnvironment(meta) {
     if (!meta || !meta.world_bounds) return;
+
+    if (this.groundMesh) {
+      this.scene.remove(this.groundMesh);
+      this.groundMesh = null;
+    }
 
     const bounds = meta.world_bounds;
     const width = bounds.maxX - bounds.minX;
@@ -83,47 +88,41 @@ export class DigitalTwinScene {
     const textureLoader = new THREE.TextureLoader();
     let material;
     if (meta.bev_texture) {
-        const bevTexture = textureLoader.load('/' + meta.bev_texture);
-        // Depending on OpenCV vs ThreeJS UV mapping, we might need to flip Y
-        // OpenCV warpPerspective outputs image where origin is top-left, 
-        // ThreeJS expects origin at bottom-left. Let's assume standard behavior first.
-        bevTexture.colorSpace = THREE.SRGBColorSpace;
-        
-        material = new THREE.MeshStandardMaterial({
-            map: bevTexture,
-            roughness: 0.8,
-            metalness: 0.1
-        });
+      const bevTexture = textureLoader.load('/' + meta.bev_texture);
+      bevTexture.colorSpace = THREE.SRGBColorSpace;
+      
+      material = new THREE.MeshStandardMaterial({
+        map: bevTexture,
+        roughness: 0.8,
+        metalness: 0.1
+      });
     } else {
-        material = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.8 });
+      material = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 });
     }
 
-    const ground = new THREE.Mesh(planeGeo, material);
-    ground.rotation.x = -Math.PI / 2; // Flat on XZ plane
-    ground.position.set(centerX, 0, centerZ);
-    ground.receiveShadow = true;
+    this.groundMesh = new THREE.Mesh(planeGeo, material);
+    this.groundMesh.rotation.x = -Math.PI / 2; // Flat on XZ plane
+    this.groundMesh.position.set(centerX, 0, centerZ);
+    this.groundMesh.receiveShadow = true;
     
-    // Rotate texture if needed because BEV top-down image represents Z as vertical, X as horizontal
-    // but Three.js PlaneGeometry maps X to width and Y to height.
-    // We will verify the orientation. 
-    this.scene.add(ground);
+    this.scene.add(this.groundMesh);
   }
 
   setupCameraView(viewType, targetPosition = new THREE.Vector3(0, 0, 0)) {
     switch (viewType) {
       case 'perspective':
-        this.camera.position.set(0, 40, 60);
+        this.camera.position.set(0, 50, 70);
         break;
       case 'topdown':
         this.camera.position.set(targetPosition.x, 100, targetPosition.z);
         break;
       case 'driver':
-        this.camera.position.set(targetPosition.x, 2, targetPosition.z - 10);
+        this.camera.position.set(targetPosition.x, 3, targetPosition.z - 12);
         break;
     }
     this.camera.lookAt(targetPosition);
     if (this.controls) {
-        this.controls.target.copy(targetPosition);
+      this.controls.target.copy(targetPosition);
     }
   }
 
