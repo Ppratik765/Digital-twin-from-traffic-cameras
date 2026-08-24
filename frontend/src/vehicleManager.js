@@ -5,25 +5,29 @@ export class VehicleManager {
     this.scene = scene;
     this.vehicles = new Map(); // id -> THREE.Group
     this.materials = {
-      carBody: new THREE.MeshStandardMaterial({ color: 0x3b82f6, roughness: 0.3, metalness: 0.7, transparent: true }), // Blue
-      truckBody: new THREE.MeshStandardMaterial({ color: 0x10b981, roughness: 0.4, metalness: 0.3, transparent: true }), // Green semi-truck cab
-      truckTrailer: new THREE.MeshStandardMaterial({ color: 0xe5e7eb, roughness: 0.7, metalness: 0.1, transparent: true }), // White trailer
-      motoBody: new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.3, metalness: 0.8, transparent: true }), // Red
-      glass: new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.1, metalness: 0.9, transparent: true }),
-      wheel: new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.9, metalness: 0.1, transparent: true }),
-      rim: new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 0.4, metalness: 0.8, transparent: true }),
+      carBody: new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.25, metalness: 0.7, transparent: true }), // Deep metallic blue
+      carBodyRed: new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.3, metalness: 0.6, transparent: true }), // Red
+      carBodySilver: new THREE.MeshStandardMaterial({ color: 0xd1d5db, roughness: 0.2, metalness: 0.8, transparent: true }), // Silver
+      carBodyBlack: new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.2, metalness: 0.9, transparent: true }), // Black
+      truckBody: new THREE.MeshStandardMaterial({ color: 0x059669, roughness: 0.35, metalness: 0.4, transparent: true }), // Emerald green semi cab
+      truckTrailer: new THREE.MeshStandardMaterial({ color: 0xf3f4f6, roughness: 0.6, metalness: 0.15, transparent: true }), // Clean white trailer
+      motoBody: new THREE.MeshStandardMaterial({ color: 0xe11d48, roughness: 0.3, metalness: 0.8, transparent: true }), // Sport red
+      glass: new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.05, metalness: 0.95, transparent: true, opacity: 0.9 }),
+      wheel: new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.95, metalness: 0.05, transparent: true }),
+      rim: new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.3, metalness: 0.9, transparent: true }),
       headlight: new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true }),
       taillight: new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true })
     };
 
-    // Create AO shadow texture
+    // Ambient Occlusion soft ground shadow texture
     const canvas = document.createElement('canvas');
     canvas.width = 128;
     canvas.height = 128;
     const context = canvas.getContext('2d');
     const gradient = context.createRadialGradient(64, 64, 0, 64, 64, 64);
-    gradient.addColorStop(0, 'rgba(0,0,0, 0.6)');
-    gradient.addColorStop(1, 'rgba(0,0,0, 0)');
+    gradient.addColorStop(0, 'rgba(0, 0, 0, 0.65)');
+    gradient.addColorStop(0.5, 'rgba(0, 0, 0, 0.3)');
+    gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
     context.fillStyle = gradient;
     context.fillRect(0, 0, 128, 128);
     const shadowTexture = new THREE.CanvasTexture(canvas);
@@ -34,74 +38,74 @@ export class VehicleManager {
     const wheelGroup = new THREE.Group();
     const tireGeo = new THREE.CylinderGeometry(radius, radius, thickness, 16);
     const tire = new THREE.Mesh(tireGeo, this.materials.wheel.clone());
-    tire.rotation.z = Math.PI / 2; // Cylinder aligned with X axis (width of vehicle)
+    tire.rotation.z = Math.PI / 2;
     tire.castShadow = true;
     wheelGroup.add(tire);
     
-    const rimGeo = new THREE.CylinderGeometry(radius * 0.6, radius * 0.6, thickness + 0.02, 8);
+    const rimGeo = new THREE.CylinderGeometry(radius * 0.62, radius * 0.62, thickness + 0.04, 10);
     const rim = new THREE.Mesh(rimGeo, this.materials.rim.clone());
     rim.rotation.z = Math.PI / 2;
     wheelGroup.add(rim);
     return wheelGroup;
   }
 
-  createVehicleMesh(className) {
+  createVehicleMesh(className, vehicleId = 0) {
     const group = new THREE.Group();
     group.userData = { isVehicle: true, className, wheels: [], currentOpacity: 0, markedForDeletion: false };
 
-    let shadowScale = 1;
+    let shadowScale = 1.0;
 
-    // Vehicle models are oriented facing +Z when rotation.y = 0
+    // Distinct vehicle model generation (proportional to wide intersection lanes)
     if (className === 'truck' || className === 'bus') {
-      shadowScale = 2.5;
-      
-      // Truck Cabin (Front +Z)
-      const cabGeo = new THREE.BoxGeometry(2.5, 2.5, 3.0);
+      shadowScale = 3.2;
+
+      // 1. Semi-Truck Cabin (Front +Z)
+      const cabGeo = new THREE.BoxGeometry(3.6, 3.6, 4.4);
       const cab = new THREE.Mesh(cabGeo, this.materials.truckBody.clone());
-      cab.position.set(0, 2.25, 3.0);
+      cab.position.set(0, 3.0, 4.5);
       cab.castShadow = true;
       group.add(cab);
 
-      // Trailer (Rear -Z)
-      const trailerGeo = new THREE.BoxGeometry(2.6, 3.5, 7.0);
+      // 2. Large Cargo Trailer (Rear -Z)
+      const trailerGeo = new THREE.BoxGeometry(3.8, 5.0, 10.5);
       const trailer = new THREE.Mesh(trailerGeo, this.materials.truckTrailer.clone());
-      trailer.position.set(0, 2.75, -2.0);
+      trailer.position.set(0, 3.8, -3.2);
       trailer.castShadow = true;
       group.add(trailer);
 
       // Windshield
-      const winGeo = new THREE.PlaneGeometry(1.8, 1.0);
+      const winGeo = new THREE.PlaneGeometry(2.6, 1.4);
       const win = new THREE.Mesh(winGeo, this.materials.glass.clone());
-      win.position.set(0, 2.6, 4.51);
+      win.position.set(0, 3.5, 6.72);
       group.add(win);
 
       // Headlights (+Z)
-      const hGeo = new THREE.PlaneGeometry(0.3, 0.3);
+      const hGeo = new THREE.PlaneGeometry(0.5, 0.4);
       const h1 = new THREE.Mesh(hGeo, this.materials.headlight.clone());
-      h1.position.set(0.8, 1.2, 4.51);
+      h1.position.set(1.2, 1.6, 6.72);
       const h2 = new THREE.Mesh(hGeo, this.materials.headlight.clone());
-      h2.position.set(-0.8, 1.2, 4.51);
+      h2.position.set(-1.2, 1.6, 6.72);
       group.add(h1);
       group.add(h2);
 
       // Taillights (-Z)
-      const tGeo = new THREE.PlaneGeometry(0.3, 0.3);
+      const tGeo = new THREE.PlaneGeometry(0.5, 0.4);
       const t1 = new THREE.Mesh(tGeo, this.materials.taillight.clone());
-      t1.position.set(0.8, 1.2, -5.51);
+      t1.position.set(1.2, 1.6, -8.47);
       t1.rotation.y = Math.PI;
       const t2 = new THREE.Mesh(tGeo, this.materials.taillight.clone());
-      t2.position.set(-0.8, 1.2, -5.51);
+      t2.position.set(-1.2, 1.6, -8.47);
       t2.rotation.y = Math.PI;
       group.add(t1);
       group.add(t2);
 
-      // Truck Wheels (6 wheels)
-      const wRadius = 0.6;
-      const wThick = 0.4;
+      // Heavy-Duty Truck Wheels (6 wheels)
+      const wRadius = 0.85;
+      const wThick = 0.55;
       const wheelPositions = [
-        [-1.25, 3.0], [1.25, 3.0],   // Cab front
-        [-1.25, -2.5], [1.25, -2.5], // Trailer mid
-        [-1.25, -4.5], [1.25, -4.5]  // Trailer rear
+        [-1.8, 4.5], [1.8, 4.5],   // Cab front
+        [-1.8, -3.5], [1.8, -3.5], // Trailer mid
+        [-1.8, -6.5], [1.8, -6.5]  // Trailer rear
       ];
       
       wheelPositions.forEach(p => {
@@ -112,31 +116,31 @@ export class VehicleManager {
       });
 
     } else if (className === 'motorcycle' || className === 'bicycle') {
-      shadowScale = 0.6;
+      shadowScale = 0.8;
       
-      const bodyGeo = new THREE.BoxGeometry(0.6, 0.8, 2.0);
+      const bodyGeo = new THREE.BoxGeometry(0.9, 1.1, 2.8);
       const body = new THREE.Mesh(bodyGeo, this.materials.motoBody.clone());
-      body.position.set(0, 0.7, 0);
+      body.position.set(0, 0.9, 0);
       body.castShadow = true;
       group.add(body);
 
       // Headlight
-      const hGeo = new THREE.PlaneGeometry(0.2, 0.2);
+      const hGeo = new THREE.PlaneGeometry(0.35, 0.35);
       const h = new THREE.Mesh(hGeo, this.materials.headlight.clone());
-      h.position.set(0, 0.8, 1.01);
+      h.position.set(0, 1.1, 1.42);
       group.add(h);
 
       // Taillight
-      const tGeo = new THREE.PlaneGeometry(0.2, 0.2);
+      const tGeo = new THREE.PlaneGeometry(0.35, 0.35);
       const t = new THREE.Mesh(tGeo, this.materials.taillight.clone());
-      t.position.set(0, 0.8, -1.01);
+      t.position.set(0, 1.1, -1.42);
       t.rotation.y = Math.PI;
       group.add(t);
 
-      // Motorcycle Wheels (2 wheels)
-      const wRadius = 0.35;
-      const wThick = 0.15;
-      const wheelPositions = [[0, 0.8], [0, -0.8]];
+      // Wheels
+      const wRadius = 0.5;
+      const wThick = 0.22;
+      const wheelPositions = [[0, 1.1], [0, -1.1]];
       
       wheelPositions.forEach(p => {
         const w = this.createWheel(wRadius, wThick);
@@ -146,49 +150,53 @@ export class VehicleManager {
       });
 
     } else {
-      // Default: Car
-      shadowScale = 1.2;
-      
-      // Car Chassis
-      const bodyGeo = new THREE.BoxGeometry(2.0, 0.9, 4.5);
-      const body = new THREE.Mesh(bodyGeo, this.materials.carBody.clone());
-      body.position.set(0, 0.85, 0);
+      // Modern Suburban SUV / Sedan Car (Scaled up to 3.0m width, 6.2m length for visibility)
+      shadowScale = 1.6;
+
+      // Color variation based on vehicle ID
+      const carPaints = [this.materials.carBody, this.materials.carBodySilver, this.materials.carBodyBlack, this.materials.carBodyRed];
+      const paintMat = carPaints[Math.abs(vehicleId) % carPaints.length].clone();
+
+      // Lower Chassis / Hood
+      const bodyGeo = new THREE.BoxGeometry(3.0, 1.3, 6.2);
+      const body = new THREE.Mesh(bodyGeo, paintMat);
+      body.position.set(0, 1.15, 0);
       body.castShadow = true;
       group.add(body);
 
-      // Car Cabin / Roof
-      const roofGeo = new THREE.BoxGeometry(1.8, 0.8, 2.2);
+      // Cabin / Roof
+      const roofGeo = new THREE.BoxGeometry(2.6, 1.1, 3.2);
       const roof = new THREE.Mesh(roofGeo, this.materials.glass.clone());
-      roof.position.set(0, 1.7, -0.2);
+      roof.position.set(0, 2.3, -0.4);
       roof.castShadow = true;
       group.add(roof);
 
       // Headlights (+Z)
-      const hGeo = new THREE.PlaneGeometry(0.3, 0.2);
+      const hGeo = new THREE.PlaneGeometry(0.5, 0.3);
       const h1 = new THREE.Mesh(hGeo, this.materials.headlight.clone());
-      h1.position.set(0.6, 1.0, 2.26);
+      h1.position.set(0.95, 1.4, 3.11);
       const h2 = new THREE.Mesh(hGeo, this.materials.headlight.clone());
-      h2.position.set(-0.6, 1.0, 2.26);
+      h2.position.set(-0.95, 1.4, 3.11);
       group.add(h1);
       group.add(h2);
 
       // Taillights (-Z)
-      const tGeo = new THREE.PlaneGeometry(0.3, 0.2);
+      const tGeo = new THREE.PlaneGeometry(0.5, 0.3);
       const t1 = new THREE.Mesh(tGeo, this.materials.taillight.clone());
-      t1.position.set(0.6, 1.0, -2.26);
+      t1.position.set(0.95, 1.4, -3.11);
       t1.rotation.y = Math.PI;
       const t2 = new THREE.Mesh(tGeo, this.materials.taillight.clone());
-      t2.position.set(-0.6, 1.0, -2.26);
+      t2.position.set(-0.95, 1.4, -3.11);
       t2.rotation.y = Math.PI;
       group.add(t1);
       group.add(t2);
 
       // Car Wheels (4 wheels)
-      const wRadius = 0.4;
-      const wThick = 0.3;
+      const wRadius = 0.58;
+      const wThick = 0.42;
       const wheelPositions = [
-        [1.0, 1.5], [-1.0, 1.5],
-        [1.0, -1.5], [-1.0, -1.5]
+        [1.5, 1.9], [-1.5, 1.9],
+        [1.5, -1.9], [-1.5, -1.9]
       ];
       
       wheelPositions.forEach(p => {
@@ -199,7 +207,7 @@ export class VehicleManager {
       });
     }
 
-    // Add AO shadow disc
+    // Dynamic ground shadow disc
     const shadowGeo = new THREE.PlaneGeometry(6 * shadowScale, 6 * shadowScale);
     const shadow = new THREE.Mesh(shadowGeo, this.shadowMaterial.clone());
     shadow.rotation.x = -Math.PI / 2;
@@ -241,7 +249,7 @@ export class VehicleManager {
     for (const vData of frameData) {
       let vehicle = this.vehicles.get(vData.id);
       if (!vehicle) {
-        vehicle = this.createVehicleMesh(vData.class_name);
+        vehicle = this.createVehicleMesh(vData.class_name, vData.id);
         vehicle.userData.id = vData.id;
         this.scene.add(vehicle);
         this.vehicles.set(vData.id, vehicle);
@@ -267,10 +275,10 @@ export class VehicleManager {
       // Check bounds
       const inBounds = (
         !meta || !meta.world_bounds || (
-          interpolatedX >= meta.world_bounds.minX - 15 &&
-          interpolatedX <= meta.world_bounds.maxX + 15 &&
-          interpolatedZ >= meta.world_bounds.minZ - 15 &&
-          interpolatedZ <= meta.world_bounds.maxZ + 15
+          interpolatedX >= meta.world_bounds.minX - 35 &&
+          interpolatedX <= meta.world_bounds.maxX + 35 &&
+          interpolatedZ >= meta.world_bounds.minZ - 35 &&
+          interpolatedZ <= meta.world_bounds.maxZ + 35
         )
       );
 
@@ -278,7 +286,7 @@ export class VehicleManager {
         vehicle.userData.markedForDeletion = true;
       }
 
-      // Direct coordinate binding - DO NOT CLAMP OR OVERRIDE
+      // Direct coordinate binding
       vehicle.position.x = interpolatedX;
       vehicle.position.z = interpolatedZ;
       vehicle.rotation.y = -interpolatedYaw + Math.PI / 2;
