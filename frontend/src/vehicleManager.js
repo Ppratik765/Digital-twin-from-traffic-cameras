@@ -48,7 +48,7 @@ export class VehicleManager {
   createVehicleMesh(className) {
     const group = new THREE.Group();
     group.userData = { isVehicle: true, className, wheels: [], currentOpacity: 0, markedForDeletion: false };
-    group.scale.set(1.5, 1.5, 1.5); // 50% larger
+    group.scale.set(2.4, 2.4, 2.4); // 60% larger than previous (2.4x base)
 
     let shadowScale = 1;
 
