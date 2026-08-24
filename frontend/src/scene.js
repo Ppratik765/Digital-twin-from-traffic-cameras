@@ -33,6 +33,10 @@ export class DigitalTwinScene {
     // Environment
     this.setupEnvironment();
 
+    // Interaction Raycaster
+    this.raycaster = new THREE.Raycaster();
+    this.mouse = new THREE.Vector2();
+
     // Resize handler
     window.addEventListener('resize', this.onWindowResize.bind(this));
   }
