@@ -36,7 +36,7 @@ class App {
       this.sceneData = await response.json();
       this.meta = this.sceneData.meta;
       
-      this.normalizeCoordinates();
+      this.scene.loadEnvironment(this.meta);
 
       this.timeline.max = this.meta.total_frames;
       this.updateTimeDisplay();
@@ -56,56 +56,6 @@ class App {
       if (hudTitle) {
         hudTitle.innerHTML = 'ITS Digital Twin <span style="color: #ef4444; font-size: 0.8rem; margin-left: 1rem;">WAITING FOR DATA (Upload scene_data.json & feed.mp4)</span>';
       }
-    }
-  }
-
-  normalizeCoordinates() {
-    let allX = [];
-    let allZ = [];
-    
-    for (const frameStr in this.sceneData.frames) {
-      const frameData = this.sceneData.frames[frameStr];
-      frameData.forEach(v => {
-        // Loose raw filter to avoid NaN/Infinity
-        if (Number.isFinite(v.x) && Number.isFinite(v.z)) {
-          allX.push(v.x);
-          allZ.push(v.z);
-        }
-      });
-    }
-
-    if (allX.length === 0) return;
-
-    allX.sort((a,b) => a-b);
-    allZ.sort((a,b) => a-b);
-    
-    // Use IQR (25th to 75th percentile) for robust scale
-    const q1X = allX[Math.floor(allX.length * 0.25)];
-    const q3X = allX[Math.floor(allX.length * 0.75)];
-    const q1Z = allZ[Math.floor(allZ.length * 0.25)];
-    const q3Z = allZ[Math.floor(allZ.length * 0.75)];
-
-    const iqrX = q3X - q1X;
-    const iqrZ = q3Z - q1Z;
-    
-    // Independent scaling to fix squished homography aspect ratio
-    const scaleX = 140 / Math.max(iqrX, 1);
-    const scaleZ = 140 / Math.max(iqrZ, 1);
-    
-    // Use Median for center
-    const centerX = allX[Math.floor(allX.length * 0.5)];
-    const centerZ = allZ[Math.floor(allZ.length * 0.5)];
-
-    for (const frameStr in this.sceneData.frames) {
-      const frameData = this.sceneData.frames[frameStr];
-      frameData.forEach(v => {
-        v.x = (v.x - centerX) * scaleX;
-        v.z = (v.z - centerZ) * scaleZ;
-        
-        // Clamp to avoid vehicles shooting off into infinity during glitches
-        v.x = Math.max(-120, Math.min(120, v.x));
-        v.z = Math.max(-120, Math.min(120, v.z));
-      });
     }
   }
 
