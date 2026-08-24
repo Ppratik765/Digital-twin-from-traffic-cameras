@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { DigitalTwinEnvironment } from './environment.js';
 
 export class DigitalTwinScene {
   constructor(containerId) {
@@ -66,7 +65,48 @@ export class DigitalTwinScene {
     this.scene.add(dirLight);
 
     // Build the high-fidelity procedural intersection
-    this.env = new DigitalTwinEnvironment(this.scene);
+    // this.env = new DigitalTwinEnvironment(this.scene); -> Removed in favor of BEV mapping
+  }
+
+  loadEnvironment(meta) {
+    if (!meta || !meta.world_bounds) return;
+
+    const bounds = meta.world_bounds;
+    const width = bounds.maxX - bounds.minX;
+    const height = bounds.maxZ - bounds.minZ;
+    const centerX = (bounds.minX + bounds.maxX) / 2;
+    const centerZ = (bounds.minZ + bounds.maxZ) / 2;
+
+    const planeGeo = new THREE.PlaneGeometry(width, height);
+    
+    // Load BEV Texture
+    const textureLoader = new THREE.TextureLoader();
+    let material;
+    if (meta.bev_texture) {
+        const bevTexture = textureLoader.load('/' + meta.bev_texture);
+        // Depending on OpenCV vs ThreeJS UV mapping, we might need to flip Y
+        // OpenCV warpPerspective outputs image where origin is top-left, 
+        // ThreeJS expects origin at bottom-left. Let's assume standard behavior first.
+        bevTexture.colorSpace = THREE.SRGBColorSpace;
+        
+        material = new THREE.MeshStandardMaterial({
+            map: bevTexture,
+            roughness: 0.8,
+            metalness: 0.1
+        });
+    } else {
+        material = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.8 });
+    }
+
+    const ground = new THREE.Mesh(planeGeo, material);
+    ground.rotation.x = -Math.PI / 2; // Flat on XZ plane
+    ground.position.set(centerX, 0, centerZ);
+    ground.receiveShadow = true;
+    
+    // Rotate texture if needed because BEV top-down image represents Z as vertical, X as horizontal
+    // but Three.js PlaneGeometry maps X to width and Y to height.
+    // We will verify the orientation. 
+    this.scene.add(ground);
   }
 
   setupCameraView(viewType, targetPosition = new THREE.Vector3(0, 0, 0)) {
