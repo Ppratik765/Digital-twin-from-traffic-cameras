@@ -166,19 +166,24 @@ export class VehicleManager {
         vehicle.position.x = THREE.MathUtils.lerp(vData.x, nextVData.x, progress);
         vehicle.position.z = THREE.MathUtils.lerp(vData.z, nextVData.z, progress);
 
-        // SLERP Rotation (Heading)
-        const q1 = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -vData.yaw);
+        // Compute actual visual heading based on the dynamically scaled coordinates
+        const dx = nextVData.x - vData.x;
+        const dz = nextVData.z - vData.z;
         
-        let nextYaw = nextVData.yaw;
-        if (nextYaw - vData.yaw > Math.PI) nextYaw -= Math.PI * 2;
-        if (nextYaw - vData.yaw < -Math.PI) nextYaw += Math.PI * 2;
+        if (Math.abs(dx) > 0.001 || Math.abs(dz) > 0.001) {
+            vehicle.userData.targetYaw = Math.atan2(-dz, dx);
+        }
 
-        const q2 = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -nextYaw);
-        
-        vehicle.quaternion.slerpQuaternions(q1, q2, progress);
+        if (vehicle.userData.targetYaw !== undefined) {
+             const targetQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), vehicle.userData.targetYaw);
+             // Apply smooth rotation damping towards the target yaw
+             vehicle.quaternion.slerp(targetQ, 0.15);
+        }
       } else {
         vehicle.position.set(vData.x, 0, vData.z);
-        vehicle.rotation.y = -vData.yaw;
+        if (vehicle.userData.targetYaw !== undefined) {
+            vehicle.rotation.y = vehicle.userData.targetYaw;
+        }
       }
 
       // Animate wheels based on actual distance moved

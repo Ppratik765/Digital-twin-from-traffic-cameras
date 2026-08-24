@@ -88,8 +88,9 @@ class App {
     const iqrX = q3X - q1X;
     const iqrZ = q3Z - q1Z;
     
-    // Scale IQR into roughly 80 units (half the intersection)
-    const scale = 80 / Math.max(iqrX, iqrZ, 1);
+    // Independent scaling to fix squished homography aspect ratio
+    const scaleX = 140 / Math.max(iqrX, 1);
+    const scaleZ = 140 / Math.max(iqrZ, 1);
     
     // Use Median for center
     const centerX = allX[Math.floor(allX.length * 0.5)];
@@ -98,16 +99,12 @@ class App {
     for (const frameStr in this.sceneData.frames) {
       const frameData = this.sceneData.frames[frameStr];
       frameData.forEach(v => {
-        // Invert X to match video left-to-right alignment
-        v.x = -(v.x - centerX) * scale;
-        v.z = (v.z - centerZ) * scale;
+        v.x = (v.x - centerX) * scaleX;
+        v.z = (v.z - centerZ) * scaleZ;
         
         // Clamp to avoid vehicles shooting off into infinity during glitches
         v.x = Math.max(-120, Math.min(120, v.x));
         v.z = Math.max(-120, Math.min(120, v.z));
-
-        // Adjust yaw because X was mirrored
-        v.yaw = Math.PI - v.yaw;
       });
     }
   }
