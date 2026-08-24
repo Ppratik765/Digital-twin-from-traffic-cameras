@@ -36,6 +36,8 @@ class App {
       this.sceneData = await response.json();
       this.meta = this.sceneData.meta;
       
+      this.normalizeCoordinates();
+
       this.timeline.max = this.meta.total_frames;
       this.updateTimeDisplay();
 
@@ -54,6 +56,53 @@ class App {
       if (hudTitle) {
         hudTitle.innerHTML = 'ITS Digital Twin <span style="color: #ef4444; font-size: 0.8rem; margin-left: 1rem;">WAITING FOR DATA (Upload scene_data.json & feed.mp4)</span>';
       }
+    }
+  }
+
+  normalizeCoordinates() {
+    let allX = [];
+    let allZ = [];
+    
+    for (const frameStr in this.sceneData.frames) {
+      const frameData = this.sceneData.frames[frameStr];
+      frameData.forEach(v => {
+        if (Math.abs(v.x) < 20000 && Math.abs(v.z) < 20000) {
+          allX.push(v.x);
+          allZ.push(v.z);
+        }
+      });
+    }
+
+    if (allX.length === 0) return;
+
+    allX.sort((a,b) => a-b);
+    allZ.sort((a,b) => a-b);
+    
+    // Ignore 5% outliers on each end
+    const minX = allX[Math.floor(allX.length * 0.05)];
+    const maxX = allX[Math.floor(allX.length * 0.95)];
+    const minZ = allZ[Math.floor(allZ.length * 0.05)];
+    const maxZ = allZ[Math.floor(allZ.length * 0.95)];
+
+    const rangeX = maxX - minX;
+    const rangeZ = maxZ - minZ;
+    
+    // Scale everything into roughly a 160x160 area (-80 to +80)
+    const scale = 160 / Math.max(rangeX, rangeZ, 1);
+    
+    const centerX = (minX + maxX) / 2;
+    const centerZ = (minZ + maxZ) / 2;
+
+    for (const frameStr in this.sceneData.frames) {
+      const frameData = this.sceneData.frames[frameStr];
+      frameData.forEach(v => {
+        v.x = (v.x - centerX) * scale;
+        v.z = (v.z - centerZ) * scale;
+        
+        // Clamp to avoid vehicles shooting off into infinity during glitches
+        v.x = Math.max(-120, Math.min(120, v.x));
+        v.z = Math.max(-120, Math.min(120, v.z));
+      });
     }
   }
 

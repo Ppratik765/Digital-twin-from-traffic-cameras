@@ -159,6 +159,8 @@ export class VehicleManager {
 
       const nextVData = nextFrameData ? nextFrameData.find(v => v.id === vData.id) : null;
 
+      const prevPos = vehicle.position.clone();
+
       if (nextVData) {
         // LERP Position
         vehicle.position.x = THREE.MathUtils.lerp(vData.x, nextVData.x, progress);
@@ -179,12 +181,15 @@ export class VehicleManager {
         vehicle.rotation.y = -vData.yaw;
       }
 
-      // Animate wheels based on speed (km/h -> m/s)
-      const distPerTick = (vData.speed_kmh / 3.6) * (1/60); 
+      // Animate wheels based on actual distance moved
+      const moved = prevPos.distanceTo(vehicle.position);
       
-      vehicle.userData.wheels.forEach(w => {
-        w.mesh.rotation.z -= distPerTick / w.radius; 
-      });
+      // If distance is too large (spawn glitch), don't spin wheels crazy fast
+      if (moved < 5) {
+        vehicle.userData.wheels.forEach(w => {
+          w.mesh.rotation.z -= moved / w.radius; 
+        });
+      }
     }
   }
 
