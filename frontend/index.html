@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>3D ITS Digital Twin</title>
+    <link rel="stylesheet" href="/src/style.css" />
+    <!-- Google Fonts for typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+  </head>
+  <body>
+    <!-- Top HUD -->
+    <header class="hud-header glass-panel">
+      <div class="hud-brand">
+        <span class="hud-title">ITS Digital Twin</span>
+        <span class="status-indicator online"></span>
+      </div>
+      <div class="hud-stats">
+        <div class="stat-item">
+          <span class="stat-label">Active Tracking</span>
+          <span class="stat-value" id="stat-count">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Avg Speed (km/h)</span>
+          <span class="stat-value" id="stat-speed">0.0</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="split-container">
+      <!-- Left Pane: Video -->
+      <div class="pane pane-left">
+        <div class="video-container">
+          <video id="feed-video" src="/videos/feed.mp4" muted playsinline></video>
+          <canvas id="overlay-canvas"></canvas>
+        </div>
+      </div>
+      
+      <!-- Right Pane: WebGL 3D -->
+      <div class="pane pane-right">
+        <div id="webgl-container"></div>
+        
+        <!-- View Controls (Floating on right) -->
+        <div class="view-controls">
+          <button class="btn-view active" data-view="perspective">Perspective</button>
+          <button class="btn-view" data-view="topdown">Top-Down</button>
+          <button class="btn-view" data-view="driver">Driver Cam</button>
+        </div>
+
+        <!-- Vehicle Inspector Card -->
+        <div id="inspector-card" class="glass-panel hidden">
+          <div class="card-header">
+            <h3>Vehicle <span id="inspect-id">--</span></h3>
+            <span class="badge" id="inspect-class">--</span>
+          </div>
+          <div class="card-body">
+            <div class="detail-row">
+              <span class="label">Speed</span>
+              <span class="value"><span id="inspect-speed">--</span> km/h</span>
+            </div>
+            <div class="detail-row">
+              <span class="label">Position (X, Z)</span>
+              <span class="value"><span id="inspect-x">--</span>, <span id="inspect-z">--</span></span>
+            </div>
+            <div class="detail-row">
+              <span class="label">Heading</span>
+              <span class="value"><span id="inspect-yaw">--</span>°</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Bottom Transport Bar -->
+    <footer class="transport-bar glass-panel">
+      <button id="btn-play" class="btn-icon">
+        <i data-lucide="play"></i>
+      </button>
+      <div class="timeline-container">
+        <input type="range" id="timeline" min="0" max="100" value="0" step="0.1" />
+        <div class="time-display">
+          <span id="time-current">0:00</span> / <span id="time-total">0:00</span>
+        </div>
+      </div>
+      <div class="speed-controls">
+        <button class="btn-speed" data-speed="0.5">0.5x</button>
+        <button class="btn-speed active" data-speed="1.0">1.0x</button>
+        <button class="btn-speed" data-speed="2.0">2.0x</button>
+      </div>
+    </footer>
+
+    <!-- Entry Point -->
+    <script type="module" src="/src/main.js"></script>
+    <script>
+      lucide.createIcons();
+    </script>
+  </body>
+</html>
