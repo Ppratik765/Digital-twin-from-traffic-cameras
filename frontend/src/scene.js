@@ -111,8 +111,22 @@ export class DigitalTwinScene {
       const bevTexture = textureLoader.load('/' + meta.bev_texture);
       bevTexture.colorSpace = THREE.SRGBColorSpace;
       
+      // Create radial alpha map for smooth blending into the environment
+      const alphaCanvas = document.createElement('canvas');
+      alphaCanvas.width = 512;
+      alphaCanvas.height = 512;
+      const ctx = alphaCanvas.getContext('2d');
+      const gradient = ctx.createRadialGradient(256, 256, 0, 256, 256, 256);
+      gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+      gradient.addColorStop(0.7, 'rgba(255, 255, 255, 0.9)');
+      gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, 512, 512);
+      const alphaTexture = new THREE.CanvasTexture(alphaCanvas);
+
       material = new THREE.MeshStandardMaterial({
         map: bevTexture,
+        alphaMap: alphaTexture,
         roughness: 0.8,
         metalness: 0.1,
         transparent: true
