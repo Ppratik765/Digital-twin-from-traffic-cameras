@@ -5,79 +5,132 @@ export class VehicleManager {
     this.scene = scene;
     this.vehicles = new Map(); // id -> THREE.Group
     this.materials = {
-      car: new THREE.MeshStandardMaterial({ color: 0x3b82f6, roughness: 0.3, metalness: 0.7 }), // Blue
-      truck: new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.5, metalness: 0.2 }), // Orange
-      bus: new THREE.MeshStandardMaterial({ color: 0x10b981, roughness: 0.6, metalness: 0.1 }), // Green
-      motorcycle: new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.2, metalness: 0.8 }), // Red
-      glass: new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.1, metalness: 0.9, transparent: true, opacity: 0.8 }),
-      headlight: new THREE.MeshBasicMaterial({ color: 0xe0f2fe }),
+      carBody: new THREE.MeshStandardMaterial({ color: 0x3b82f6, roughness: 0.3, metalness: 0.7 }), // Blue
+      truckBody: new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.5, metalness: 0.2 }), // Orange
+      truckTrailer: new THREE.MeshStandardMaterial({ color: 0xe5e7eb, roughness: 0.7, metalness: 0.1 }), // White
+      glass: new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.1, metalness: 0.9 }),
+      wheel: new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.9, metalness: 0.1 }),
+      rim: new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 0.4, metalness: 0.8 }),
+      headlight: new THREE.MeshBasicMaterial({ color: 0xffffff }),
       taillight: new THREE.MeshBasicMaterial({ color: 0xff0000 })
     };
   }
 
+  createWheel(radius, thickness) {
+    const wheelGroup = new THREE.Group();
+    // Tire
+    const tireGeo = new THREE.CylinderGeometry(radius, radius, thickness, 16);
+    const tire = new THREE.Mesh(tireGeo, this.materials.wheel);
+    tire.rotation.x = Math.PI / 2;
+    tire.castShadow = true;
+    wheelGroup.add(tire);
+    
+    // Rim
+    const rimGeo = new THREE.CylinderGeometry(radius * 0.6, radius * 0.6, thickness + 0.02, 8);
+    const rim = new THREE.Mesh(rimGeo, this.materials.rim);
+    rim.rotation.x = Math.PI / 2;
+    wheelGroup.add(rim);
+    return wheelGroup;
+  }
+
   createVehicleMesh(className) {
     const group = new THREE.Group();
-    let bodyGeo, bodyMesh, roofGeo, roofMesh;
+    group.userData = { isVehicle: true, className, wheels: [] };
 
-    // Simple procedural geometries based on class
-    switch (className) {
-      case 'truck':
-      case 'bus':
-        bodyGeo = new THREE.BoxGeometry(2.5, 3, 8);
-        bodyMesh = new THREE.Mesh(bodyGeo, this.materials[className] || this.materials.truck);
-        bodyMesh.position.y = 1.5;
-        bodyMesh.castShadow = true;
-        group.add(bodyMesh);
-        break;
-      case 'motorcycle':
-        bodyGeo = new THREE.BoxGeometry(0.6, 1.2, 2);
-        bodyMesh = new THREE.Mesh(bodyGeo, this.materials.motorcycle);
-        bodyMesh.position.y = 0.6;
-        bodyMesh.castShadow = true;
-        group.add(bodyMesh);
-        break;
-      case 'car':
-      default:
-        // Chassis
-        bodyGeo = new THREE.BoxGeometry(2, 1, 4);
-        bodyMesh = new THREE.Mesh(bodyGeo, this.materials.car);
-        bodyMesh.position.y = 0.7; // slightly off ground for wheels
-        bodyMesh.castShadow = true;
-        
-        // Cabin
-        roofGeo = new THREE.BoxGeometry(1.6, 0.8, 2);
-        roofMesh = new THREE.Mesh(roofGeo, this.materials.glass);
-        roofMesh.position.y = 1.6;
-        roofMesh.position.z = -0.2;
-        roofMesh.castShadow = true;
+    // To fix sliding: yaw=0 means moving along +X axis.
+    // So the vehicle's front points towards +X. Length is along X, width along Z.
 
-        // Headlights
-        const hGeo = new THREE.PlaneGeometry(0.4, 0.2);
-        const h1 = new THREE.Mesh(hGeo, this.materials.headlight);
-        h1.position.set(0.6, 0.8, 2.01);
-        const h2 = new THREE.Mesh(hGeo, this.materials.headlight);
-        h2.position.set(-0.6, 0.8, 2.01);
+    if (className === 'truck' || className === 'bus') {
+      // TRUCK CABIN
+      const cabGeo = new THREE.BoxGeometry(3, 2.5, 2.5);
+      const cab = new THREE.Mesh(cabGeo, this.materials.truckBody);
+      cab.position.set(3, 2.25, 0); // Front is +X
+      cab.castShadow = true;
+      group.add(cab);
 
-        // Taillights
-        const tGeo = new THREE.PlaneGeometry(0.4, 0.2);
-        const t1 = new THREE.Mesh(tGeo, this.materials.taillight);
-        t1.position.set(0.6, 0.9, -2.01);
-        t1.rotation.y = Math.PI;
-        const t2 = new THREE.Mesh(tGeo, this.materials.taillight);
-        t2.position.set(-0.6, 0.9, -2.01);
-        t2.rotation.y = Math.PI;
+      // TRAILER
+      const trailerGeo = new THREE.BoxGeometry(7, 3.5, 2.6);
+      const trailer = new THREE.Mesh(trailerGeo, this.materials.truckTrailer);
+      trailer.position.set(-2, 2.75, 0);
+      trailer.castShadow = true;
+      group.add(trailer);
 
-        group.add(bodyMesh);
-        group.add(roofMesh);
-        group.add(h1);
-        group.add(h2);
-        group.add(t1);
-        group.add(t2);
-        break;
+      // CABIN WINDOW
+      const winGeo = new THREE.PlaneGeometry(0.5, 1.2);
+      const win = new THREE.Mesh(winGeo, this.materials.glass);
+      win.position.set(4.51, 2.5, 0);
+      win.rotation.y = Math.PI / 2;
+      group.add(win);
+
+      // TRUCK WHEELS (6 wheels: 2 front cab, 4 rear trailer)
+      const wRadius = 0.6;
+      const wThick = 0.4;
+      const wheelPositions = [
+        [3, -1.25], [3, 1.25], // Cab front
+        [-2.5, -1.25], [-2.5, 1.25], // Trailer mid
+        [-4.5, -1.25], [-4.5, 1.25]  // Trailer rear
+      ];
+      
+      wheelPositions.forEach(p => {
+        const w = this.createWheel(wRadius, wThick);
+        w.position.set(p[0], wRadius, p[1]);
+        group.add(w);
+        group.userData.wheels.push({ mesh: w, radius: wRadius });
+      });
+
+    } else {
+      // CAR CHASSIS
+      const bodyGeo = new THREE.BoxGeometry(4.5, 1, 2);
+      const body = new THREE.Mesh(bodyGeo, this.materials.carBody);
+      body.position.set(0, 0.9, 0);
+      body.castShadow = true;
+      group.add(body);
+
+      // CAR CABIN
+      const roofGeo = new THREE.BoxGeometry(2.2, 0.8, 1.8);
+      const roof = new THREE.Mesh(roofGeo, this.materials.glass);
+      roof.position.set(-0.2, 1.8, 0); // slightly back
+      roof.castShadow = true;
+      group.add(roof);
+
+      // HEADLIGHTS (Facing +X)
+      const hGeo = new THREE.PlaneGeometry(0.2, 0.3);
+      const h1 = new THREE.Mesh(hGeo, this.materials.headlight);
+      h1.position.set(2.26, 1.1, 0.6);
+      h1.rotation.y = Math.PI / 2;
+      const h2 = new THREE.Mesh(hGeo, this.materials.headlight);
+      h2.position.set(2.26, 1.1, -0.6);
+      h2.rotation.y = Math.PI / 2;
+      group.add(h1);
+      group.add(h2);
+
+      // TAILLIGHTS (Facing -X)
+      const tGeo = new THREE.PlaneGeometry(0.2, 0.3);
+      const t1 = new THREE.Mesh(tGeo, this.materials.taillight);
+      t1.position.set(-2.26, 1.1, 0.6);
+      t1.rotation.y = -Math.PI / 2;
+      const t2 = new THREE.Mesh(tGeo, this.materials.taillight);
+      t2.position.set(-2.26, 1.1, -0.6);
+      t2.rotation.y = -Math.PI / 2;
+      group.add(t1);
+      group.add(t2);
+
+      // CAR WHEELS
+      const wRadius = 0.4;
+      const wThick = 0.3;
+      const wheelPositions = [
+        [1.5, 1], [1.5, -1],
+        [-1.5, 1], [-1.5, -1]
+      ];
+      
+      wheelPositions.forEach(p => {
+        const w = this.createWheel(wRadius, wThick);
+        w.position.set(p[0], wRadius, p[1]);
+        group.add(w);
+        group.userData.wheels.push({ mesh: w, radius: wRadius });
+      });
     }
 
-    // Add user data for raycasting
-    group.userData = { isVehicle: true, className };
     return group;
   }
 
@@ -104,7 +157,6 @@ export class VehicleManager {
 
       vehicle.userData.data = vData;
 
-      // Find next state for interpolation
       const nextVData = nextFrameData ? nextFrameData.find(v => v.id === vData.id) : null;
 
       if (nextVData) {
@@ -113,11 +165,8 @@ export class VehicleManager {
         vehicle.position.z = THREE.MathUtils.lerp(vData.z, nextVData.z, progress);
 
         // SLERP Rotation (Heading)
-        // Assuming angle 0 means moving along positive X. Note cityflow X_w/Z_w might have different orientation.
-        // We negate yaw to match threejs rotation if needed, or adjust axis.
         const q1 = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -vData.yaw);
         
-        // Handle wrap-around for yaw interpolation
         let nextYaw = nextVData.yaw;
         if (nextYaw - vData.yaw > Math.PI) nextYaw -= Math.PI * 2;
         if (nextYaw - vData.yaw < -Math.PI) nextYaw += Math.PI * 2;
@@ -126,10 +175,16 @@ export class VehicleManager {
         
         vehicle.quaternion.slerpQuaternions(q1, q2, progress);
       } else {
-        // No interpolation
         vehicle.position.set(vData.x, 0, vData.z);
         vehicle.rotation.y = -vData.yaw;
       }
+
+      // Animate wheels based on speed (km/h -> m/s)
+      const distPerTick = (vData.speed_kmh / 3.6) * (1/60); 
+      
+      vehicle.userData.wheels.forEach(w => {
+        w.mesh.rotation.z -= distPerTick / w.radius; 
+      });
     }
   }
 
