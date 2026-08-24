@@ -1,11 +1,13 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { DigitalTwinEnvironment } from './environment.js';
 
 export class DigitalTwinScene {
   constructor(containerId) {
     this.container = document.getElementById(containerId);
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x0b0f19);
+    this.scene.background = new THREE.Color(0x87ceeb); // Light blue sky
+    this.scene.fog = new THREE.FogExp2(0x87ceeb, 0.005); // Atmospheric fog
     
     // Camera setup
     this.camera = new THREE.PerspectiveCamera(
@@ -22,6 +24,8 @@ export class DigitalTwinScene {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.container.appendChild(this.renderer.domElement);
 
     // Controls
@@ -43,12 +47,12 @@ export class DigitalTwinScene {
 
   setupEnvironment() {
     // Lights
-    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.4);
     hemiLight.position.set(0, 200, 0);
     this.scene.add(hemiLight);
 
-    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    dirLight.position.set(50, 100, 50);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    dirLight.position.set(100, 150, 50);
     dirLight.castShadow = true;
     dirLight.shadow.camera.top = 100;
     dirLight.shadow.camera.bottom = -100;
@@ -56,27 +60,13 @@ export class DigitalTwinScene {
     dirLight.shadow.camera.right = 100;
     dirLight.shadow.camera.near = 0.1;
     dirLight.shadow.camera.far = 500;
-    dirLight.shadow.mapSize.width = 2048;
-    dirLight.shadow.mapSize.height = 2048;
-    dirLight.shadow.bias = -0.001;
+    dirLight.shadow.mapSize.width = 4096;
+    dirLight.shadow.mapSize.height = 4096;
+    dirLight.shadow.bias = -0.0005;
     this.scene.add(dirLight);
 
-    // Asphalt Ground
-    const groundGeo = new THREE.PlaneGeometry(200, 200);
-    const groundMat = new THREE.MeshStandardMaterial({ 
-      color: 0x1a1a24,
-      roughness: 0.8,
-      metalness: 0.2
-    });
-    const ground = new THREE.Mesh(groundGeo, groundMat);
-    ground.rotation.x = -Math.PI / 2;
-    ground.receiveShadow = true;
-    this.scene.add(ground);
-
-    // Grid Helper
-    const gridHelper = new THREE.GridHelper(200, 100, 0x333344, 0x222233);
-    gridHelper.position.y = 0.05;
-    this.scene.add(gridHelper);
+    // Build the high-fidelity procedural intersection
+    this.env = new DigitalTwinEnvironment(this.scene);
   }
 
   setupCameraView(viewType, targetPosition = new THREE.Vector3(0, 0, 0)) {
