@@ -7,8 +7,8 @@ export class DigitalTwinScene {
     this.scene = new THREE.Scene();
     
     // 1. Smart City Dark Mode & Horizon Fog
-    this.scene.background = new THREE.Color('#0f172a'); // Deep slate dark mode
-    this.scene.fog = new THREE.Fog('#0f172a', 60, 250); // Atmospheric distance fog
+    this.scene.background = new THREE.Color('#0f172a');
+    this.scene.fog = new THREE.Fog('#0f172a', 60, 250);
     
     // Camera setup
     this.camera = new THREE.PerspectiveCamera(
@@ -35,15 +35,15 @@ export class DigitalTwinScene {
     this.controls.dampingFactor = 0.05;
     this.controls.maxPolarAngle = Math.PI / 2 - 0.05; // Don't go below ground
 
-    // Environment & Base Layers
+    // Ground mesh reference
+    this.groundMesh = null;
+
+    // Environment & Base Planes
     this.setupEnvironment();
 
     // Interaction Raycaster
     this.raycaster = new THREE.Raycaster();
     this.mouse = new THREE.Vector2();
-
-    // Ground mesh reference (Overlay BEV texture)
-    this.groundMesh = null;
 
     // Resize handler
     window.addEventListener('resize', this.onWindowResize.bind(this));
@@ -51,12 +51,12 @@ export class DigitalTwinScene {
 
   setupEnvironment() {
     // 5. Lighting Adjustments for Dark Mode
-    const hemiLight = new THREE.HemisphereLight('#64748b', '#0f172a', 0.6);
+    const hemiLight = new THREE.HemisphereLight(0x94a3b8, 0x0f172a, 0.6);
     hemiLight.position.set(0, 200, 0);
     this.scene.add(hemiLight);
 
-    const dirLight = new THREE.DirectionalLight('#ffffff', 1.5);
-    dirLight.position.set(80, 140, 60);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+    dirLight.position.set(80, 120, 60);
     dirLight.castShadow = true;
     dirLight.shadow.camera.top = 80;
     dirLight.shadow.camera.bottom = -80;
@@ -69,7 +69,7 @@ export class DigitalTwinScene {
     dirLight.shadow.bias = -0.0005;
     this.scene.add(dirLight);
 
-    // 2. The "Infinite" Asphalt Base Plane (y = 0.0)
+    // 2. The "Infinite" Asphalt Base Plane at y = 0.0
     const baseGeo = new THREE.PlaneGeometry(2000, 2000);
     const baseMat = new THREE.MeshStandardMaterial({
       color: '#1a1a1a',
@@ -77,15 +77,15 @@ export class DigitalTwinScene {
       metalness: 0.1
     });
     const basePlane = new THREE.Mesh(baseGeo, baseMat);
-    basePlane.rotation.x = -Math.PI / 2; // Lie flat on XZ plane
+    basePlane.rotation.x = -Math.PI / 2;
     basePlane.position.set(0, 0.0, 0);
     basePlane.receiveShadow = true;
     this.scene.add(basePlane);
 
-    // 4. Infinite Grid Helper (y = 0.05)
-    const grid = new THREE.GridHelper(2000, 200, '#334155', '#1e293b');
-    grid.position.set(0, 0.05, 0);
-    this.scene.add(grid);
+    // 4. Infinite Grid Helper at y = 0.05
+    const gridHelper = new THREE.GridHelper(2000, 200, '#334155', '#1e293b');
+    gridHelper.position.set(0, 0.05, 0);
+    this.scene.add(gridHelper);
   }
 
   loadEnvironment(meta) {
@@ -104,7 +104,7 @@ export class DigitalTwinScene {
 
     const planeGeo = new THREE.PlaneGeometry(width, height);
     
-    // 3. Intersection Texture Layering (y = 0.1 to prevent Z-fighting)
+    // 3. Intersection Texture Layering (Positioned at y = 0.1 to prevent Z-fighting)
     const textureLoader = new THREE.TextureLoader();
     let material;
     if (meta.bev_texture) {
@@ -115,18 +115,15 @@ export class DigitalTwinScene {
         map: bevTexture,
         roughness: 0.8,
         metalness: 0.1,
-        transparent: true,
-        polygonOffset: true,
-        polygonOffsetFactor: -1,
-        polygonOffsetUnits: -1
+        transparent: true
       });
     } else {
-      material = new THREE.MeshStandardMaterial({ color: '#222222', roughness: 0.8 });
+      material = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 });
     }
 
     this.groundMesh = new THREE.Mesh(planeGeo, material);
     this.groundMesh.rotation.x = -Math.PI / 2; // Flat on XZ plane
-    this.groundMesh.position.set(centerX, 0.1, centerZ); // Placed at y = 0.1 above infinite base
+    this.groundMesh.position.set(centerX, 0.1, centerZ); // Placed at y = 0.1
     this.groundMesh.receiveShadow = true;
     
     this.scene.add(this.groundMesh);
