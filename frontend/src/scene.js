@@ -75,10 +75,10 @@ export class DigitalTwinScene {
     // Environment is procedurally modeled to perfection
   }
 
-  setupCameraView(viewType, targetPosition = new THREE.Vector3(0, 0, -20)) {
+  setupCameraView(viewType, targetPosition = new THREE.Vector3(10, 0, -30)) {
     switch (viewType) {
       case 'perspective':
-        this.camera.position.set(0, 60, 75);
+        this.camera.position.set(10, 75, 85);
         break;
       case 'topdown':
         this.camera.position.set(targetPosition.x, 140, targetPosition.z);
