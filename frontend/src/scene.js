@@ -49,28 +49,6 @@ export class DigitalTwinScene {
     window.addEventListener('resize', this.onWindowResize.bind(this));
   }
 
-  createProceduralConcreteTexture() {
-    const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 512;
-    const context = canvas.getContext('2d');
-    context.fillStyle = '#1e1e1e';
-    context.fillRect(0, 0, 512, 512);
-    for (let i = 0; i < 5000; i++) {
-      context.fillStyle = Math.random() > 0.5 ? '#2a2a2a' : '#151515';
-      context.fillRect(Math.random() * 512, Math.random() * 512, 2, 2);
-    }
-    context.fillStyle = '#111';
-    context.fillRect(0, 254, 512, 4);
-    context.fillRect(254, 0, 4, 512);
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.wrapS = THREE.RepeatWrapping;
-    texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set(100, 100);
-    texture.colorSpace = THREE.SRGBColorSpace;
-    return texture;
-  }
-
   setupEnvironment() {
     // 5. Lighting Adjustments for Dark Mode
     const hemiLight = new THREE.HemisphereLight(0x94a3b8, 0x0f172a, 0.6);
@@ -94,7 +72,7 @@ export class DigitalTwinScene {
     // 2. The "Infinite" Asphalt Base Plane at y = 0.0
     const baseGeo = new THREE.PlaneGeometry(2000, 2000);
     const baseMat = new THREE.MeshStandardMaterial({
-      map: this.createProceduralConcreteTexture(),
+      color: 0x0f172a,
       roughness: 0.95,
       metalness: 0.05
     });
@@ -108,6 +86,64 @@ export class DigitalTwinScene {
     const gridHelper = new THREE.GridHelper(2000, 200, '#334155', '#1e293b');
     gridHelper.position.set(0, 0.05, 0);
     this.scene.add(gridHelper);
+
+    // 4b. Procedural "concrete fallback" plane at y = 0.08.
+    // Sits beneath the real extended photo texture (added in loadEnvironment,
+    // at y = 0.1) and above the dark neon grid (y = 0.05). The real texture
+    // is loaded with transparent: true, so wherever it is transparent
+    // (outside the segmented ground area, or outside the source video frame
+    // entirely) this plane shows through instead of bare dark grid — the
+    // scene reads as continuous road/ground everywhere near the camera,
+    // with a graceful, intentionally-lower-fidelity extension beyond that.
+    const concreteGeo = new THREE.PlaneGeometry(300, 300);
+    const concreteMat = new THREE.MeshStandardMaterial({
+      map: this.createProceduralConcreteTexture(),
+      roughness: 0.95,
+      metalness: 0.0
+    });
+    const concretePlane = new THREE.Mesh(concreteGeo, concreteMat);
+    concretePlane.rotation.x = -Math.PI / 2;
+    concretePlane.position.set(0, 0.08, 0);
+    concretePlane.receiveShadow = true;
+    this.scene.add(concretePlane);
+  }
+
+  createProceduralConcreteTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+
+    // Base concrete tone sampled from the real feed.mp4 pavement (light grey)
+    ctx.fillStyle = '#8d8d87';
+    ctx.fillRect(0, 0, 512, 512);
+
+    // Subtle per-pixel noise so it doesn't read as a flat color fill
+    const imgData = ctx.getImageData(0, 0, 512, 512);
+    for (let i = 0; i < imgData.data.length; i += 4) {
+      const n = (Math.random() - 0.5) * 14;
+      imgData.data[i] += n;
+      imgData.data[i + 1] += n;
+      imgData.data[i + 2] += n;
+    }
+    ctx.putImageData(imgData, 0, 0);
+
+    // Faint expansion-joint grid lines, echoing the real concrete slab seams
+    ctx.strokeStyle = 'rgba(60,60,55,0.35)';
+    ctx.lineWidth = 2;
+    const step = 64;
+    for (let x = 0; x <= 512; x += step) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 512); ctx.stroke();
+    }
+    for (let y = 0; y <= 512; y += step) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(512, y); ctx.stroke();
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(20, 20);
+    return tex;
   }
 
   loadEnvironment(meta) {
