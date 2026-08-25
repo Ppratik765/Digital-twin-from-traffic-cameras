@@ -14,13 +14,14 @@ The backend pipeline is computationally intensive and should be run on a GPU-ena
 1. Upload `colab/its_perception_pipeline.ipynb` to Google Colab.
 2. Ensure you have a Kaggle account. The notebook will prompt you for your `KAGGLE_USERNAME` and `KAGGLE_KEY` to download the dataset.
 3. Run all cells in the notebook.
-4. Once processing is complete, download `feed.mp4` and `scene_data.json` from the Colab file explorer.
+4. Once processing is complete, download `feed.mp4`, `scene_data.json`, AND `road_bev.png` from the Colab file explorer.
 
 ## 2. Running the 3D Frontend
 
 1. Move the generated files into the frontend directory:
    - Place `scene_data.json` into `frontend/public/data/`
    - Place `feed.mp4` into `frontend/public/videos/`
+   - Place `road_bev.png` into `frontend/public/textures/` (overwrite the existing file)
 
 2. Open a terminal in the `frontend/` directory and install dependencies:
    ```bash
