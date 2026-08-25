@@ -48,12 +48,12 @@ export class VehicleManager {
   createVehicleMesh(className) {
     const group = new THREE.Group();
     group.userData = { isVehicle: true, className, wheels: [], currentOpacity: 0, markedForDeletion: false };
-    group.scale.set(2.4, 2.4, 2.4); // 60% larger than previous (2.4x base)
 
     let shadowScale = 1;
 
     // Vehicle models are oriented facing +Z when rotation.y = 0
     if (className === 'truck' || className === 'bus') {
+      group.scale.set(2.64, 2.64, 2.64); // +10% from 2.4x
       shadowScale = 2.5;
       
       // Truck Cabin (Front +Z)
@@ -113,6 +113,7 @@ export class VehicleManager {
       });
 
     } else if (className === 'motorcycle' || className === 'bicycle') {
+      group.scale.set(2.4, 2.4, 2.4);
       shadowScale = 0.6;
       
       const bodyGeo = new THREE.BoxGeometry(0.6, 0.8, 2.0);
@@ -147,7 +148,8 @@ export class VehicleManager {
       });
 
     } else {
-      // Default: Car
+      // Default: Car (+30% from 2.4x -> 3.12x)
+      group.scale.set(3.12, 3.12, 3.12);
       shadowScale = 1.2;
       
       // Car Chassis
