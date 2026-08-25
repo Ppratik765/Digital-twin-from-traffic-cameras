@@ -49,6 +49,28 @@ export class DigitalTwinScene {
     window.addEventListener('resize', this.onWindowResize.bind(this));
   }
 
+  createProceduralConcreteTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const context = canvas.getContext('2d');
+    context.fillStyle = '#1e1e1e';
+    context.fillRect(0, 0, 512, 512);
+    for (let i = 0; i < 5000; i++) {
+      context.fillStyle = Math.random() > 0.5 ? '#2a2a2a' : '#151515';
+      context.fillRect(Math.random() * 512, Math.random() * 512, 2, 2);
+    }
+    context.fillStyle = '#111';
+    context.fillRect(0, 254, 512, 4);
+    context.fillRect(254, 0, 4, 512);
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(100, 100);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    return texture;
+  }
+
   setupEnvironment() {
     // 5. Lighting Adjustments for Dark Mode
     const hemiLight = new THREE.HemisphereLight(0x94a3b8, 0x0f172a, 0.6);
@@ -72,9 +94,9 @@ export class DigitalTwinScene {
     // 2. The "Infinite" Asphalt Base Plane at y = 0.0
     const baseGeo = new THREE.PlaneGeometry(2000, 2000);
     const baseMat = new THREE.MeshStandardMaterial({
-      color: '#1a1a1a',
-      roughness: 0.9,
-      metalness: 0.1
+      map: this.createProceduralConcreteTexture(),
+      roughness: 0.95,
+      metalness: 0.05
     });
     const basePlane = new THREE.Mesh(baseGeo, baseMat);
     basePlane.rotation.x = -Math.PI / 2;
