@@ -104,21 +104,6 @@ class App {
       });
     });
 
-    // View Controls
-    document.querySelectorAll('.btn-view').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        document.querySelectorAll('.btn-view').forEach(b => b.classList.remove('active'));
-        e.target.classList.add('active');
-        
-        let targetPos = this.scene.controls.target.clone();
-        if (this.selectedVehicleId) {
-          const vData = this.sceneData.frames[this.currentFrame]?.find(v => v.id === this.selectedVehicleId);
-          if (vData) targetPos = new THREE.Vector3(vData.x, 0, vData.z);
-        }
-        this.scene.setupCameraView(e.target.dataset.view, targetPos);
-      });
-    });
-
     // 3D Scene Interaction (Click to inspect)
     this.scene.renderer.domElement.addEventListener('pointerdown', (e) => {
       // Calculate mouse position in normalized device coordinates
@@ -145,12 +130,7 @@ class App {
           // Look at it
           const vData = this.sceneData.frames[this.currentFrame]?.find(v => v.id === this.selectedVehicleId);
           if (vData) {
-             const activeViewBtn = document.querySelector('.btn-view.active');
-             if(activeViewBtn && activeViewBtn.dataset.view === 'driver') {
-               this.scene.setupCameraView('driver', new THREE.Vector3(vData.x, 0, vData.z));
-             } else {
-               this.scene.controls.target.set(vData.x, 0, vData.z);
-             }
+            this.scene.controls.target.set(vData.x, 0, vData.z);
           }
         }
       } else {
@@ -216,11 +196,6 @@ class App {
       const vData = f1Data.find(v => v.id === this.selectedVehicleId);
       if (vData) {
         this.hud.showInspector(vData);
-        // Follow vehicle with camera if Driver Cam is active
-        const activeViewBtn = document.querySelector('.btn-view.active');
-        if(activeViewBtn && activeViewBtn.dataset.view === 'driver') {
-          this.scene.setupCameraView('driver', new THREE.Vector3(vData.x, 0, vData.z));
-        }
       } else {
         // Vehicle left the scene
         this.selectedVehicleId = null;

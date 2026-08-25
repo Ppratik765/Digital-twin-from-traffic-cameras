@@ -139,38 +139,10 @@ body {
   height: 100%;
 }
 
-/* View Controls */
-.view-controls {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  display: flex;
-  gap: 0.5rem;
-  z-index: 10;
-}
-
-.btn-view {
-  background: var(--panel-bg);
-  border: 1px solid var(--panel-border);
-  color: var(--text-primary);
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 0.8rem;
-  transition: all 0.2s;
-  backdrop-filter: blur(8px);
-}
-
-.btn-view:hover, .btn-view.active {
-  background: var(--accent-color);
-  border-color: var(--accent-hover);
-}
-
 /* Inspector Card */
 #inspector-card {
   position: absolute;
-  top: 4rem;
+  top: 1rem;
   right: 1rem;
   width: 280px;
   border-radius: 8px;
