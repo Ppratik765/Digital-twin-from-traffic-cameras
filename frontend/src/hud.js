@@ -68,7 +68,10 @@ export class HUD {
     this.overlayCtx.lineWidth = 2;
     this.overlayCtx.font = '12px Inter, sans-serif';
 
+    const hiddenOverlayIds = new Set([1, 2, 3, 5]);
+
     frameData.forEach(v => {
+      if (hiddenOverlayIds.has(v.id)) return;
       const [x1, y1, x2, y2] = v.bbox;
       
       const sx1 = x1 * scaleX;
